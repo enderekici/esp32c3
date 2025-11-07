@@ -59,6 +59,10 @@ jobs:
       - name: Prepare OTA files & generate version.json
         run: |
           mkdir -p docs
+          VERSION="${{ steps.meta.outputs.version }}"
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+
           echo '{ "firmwares": [' > docs/version.json
           first=true
           for sketch_build in build/*/; do
@@ -77,9 +81,9 @@ jobs:
 cat <<EOF >> docs/version.json
 {
   "name": "$SKETCH_NAME",
-  "version": "${{ steps.meta.outputs.version }}",
+  "version": "$VERSION",
   "sha256": "$SHA256",
-  "url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/$SKETCH_NAME.bin"
+  "url": "https://$OWNER.github.io/$REPO/$SKETCH_NAME.bin"
 }
 EOF
 
