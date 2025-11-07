@@ -11,87 +11,73 @@ jobs:
       contents: write
 
     steps:
-      # 1️⃣ Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Set build metadata and detect latest modified sketch
       - name: Get build metadata
         id: meta
         run: |
-          SKETCH=$(find . -maxdepth 2 -name "*.ino" -type f -printf "%T@ %p\n" | sort -nr | head -n 1 | cut -d' ' -f2-)
-          echo "sketch_name=$(basename "$SKETCH")" >> "$GITHUB_OUTPUT"
-          echo "sketch_path=$SKETCH" >> "$GITHUB_OUTPUT"
           echo "commit=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
           echo "build_date=$(date +'%Y-%m-%d %H:%M:%S')" >> "$GITHUB_OUTPUT"
           echo "version=build-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
-      # 3️⃣ Install Arduino CLI
       - name: Install Arduino CLI
         uses: arduino/setup-arduino-cli@v1
 
-      # 4️⃣ Install ESP32 core
       - name: Install ESP32 core
         run: |
           arduino-cli core update-index
           arduino-cli core install esp32:esp32
 
-      # 5️⃣ Install ArduinoJson library
       - name: Install ArduinoJson
         run: arduino-cli lib install "ArduinoJson"
 
-      # 6️⃣ Write build_info.h (fixed syntax)
+      - name: Choose sketch folder
+        id: sketch
+        run: |
+          # default: dashboard
+          echo "sketch_folder=dashboard" >> "$GITHUB_OUTPUT"
+          # To build blink_tiny, set "sketch_folder=blink_tiny"
+
       - name: Write build_info.h
         run: |
-          echo "#pragma once" > build_info.h
-          echo "#define BUILD_COMMIT \"${{ steps.meta.outputs.commit }}\"" >> build_info.h
-          echo "#define BUILD_DATE \"${{ steps.meta.outputs.build_date }}\"" >> build_info.h
-          echo "#define BUILD_VERSION \"${{ steps.meta.outputs.version }} (${{ steps.meta.outputs.sketch_name }})\"" >> build_info.h
+          SKETCH=${{ steps.sketch.outputs.sketch_folder }}
+          echo "#pragma once" > $SKETCH/build_info.h
+          echo "#define BUILD_COMMIT \"${{ steps.meta.outputs.commit }}\"" >> $SKETCH/build_info.h
+          echo "#define BUILD_DATE \"${{ steps.meta.outputs.build_date }}\"" >> $SKETCH/build_info.h
+          echo "#define BUILD_VERSION \"${{ steps.meta.outputs.version }}\"" >> $SKETCH/build_info.h
 
-      # 7️⃣ Compile the latest modified sketch automatically
-      - name: Compile sketch
+      - name: Compile Sketch
         run: |
-          mkdir build
-          echo "📘 Compiling: ${{ steps.meta.outputs.sketch_path }}"
-          arduino-cli compile \
-            --fqbn esp32:esp32:esp32c3:PartitionScheme=default,DebugLevel=info \
-            --output-dir build \
-            "${{ steps.meta.outputs.sketch_path }}"
+          SKETCH=${{ steps.sketch.outputs.sketch_folder }}
+          mkdir -p build
+          arduino-cli compile --fqbn esp32:esp32:esp32c3 $SKETCH --output-dir build
 
-      # 8️⃣ Copy OTA firmware to docs folder
       - name: Copy OTA firmware
         run: |
           mkdir -p docs
           OTA_FIRMWARE=$(ls build/*.ino.bin | head -n 1)
-          echo "Using $OTA_FIRMWARE for OTA"
           cp "$OTA_FIRMWARE" docs/firmware.bin
 
-      # 9️⃣ Generate version.json
       - name: Generate version.json
         run: |
           SHA256=$(shasum -a 256 docs/firmware.bin | awk '{print $1}')
           cat <<EOF > docs/version.json
           {
             "version": "${{ steps.meta.outputs.version }}",
-            "sketch": "${{ steps.meta.outputs.sketch_name }}",
             "sha256": "${SHA256}",
-            "url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/firmware.bin"
+            "url": "http://$GITHUB_REPOSITORY_OWNER.github.io/$GITHUB_REPOSITORY/firmware.bin"
           }
           EOF
 
-      # 🔟 Commit & push to GitHub Pages (fixed sketch name)
       - name: Commit & push to GitHub Pages
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -B gh-pages
           git add docs/firmware.bin docs/version.json
-          git commit -m "Update firmware (${{ steps.meta.outputs.sketch_name }}) [skip ci]" || echo "No changes to commit"
+          git commit -m "Update firmware and version.json [skip ci]" || echo "No changes to commit"
           git push --force origin gh-pages
 
-      # 1️⃣1️⃣ Print OTA URL
       - name: Print OTA URL
-        run: |
-          echo "Firmware OTA URL:"
-          echo "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/firmware.bin"
-          echo "Version info: docs/version.json"
+        run: echo "http://$GITHUB_REPOSITORY_OWNER.github.io/$GITHUB_REPOSITORY/firmware.bin"

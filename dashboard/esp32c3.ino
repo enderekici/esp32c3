@@ -8,38 +8,21 @@
 // === CONFIG ===
 const char* WIFI_SSID = "Ender_2G";
 const char* WIFI_PASS = "134679tdg";
-const char* VERSION_JSON_URL = "https://enderekici.github.io/esp32c3/version.json";
-const unsigned long CHECK_INTERVAL = 5 * 60 * 1000; // 5 mins
-
-// === OTA LED ===
-#define OTA_LED 8  // Correct built-in LED pin for ESP32-C3 Super Mini
+const char* VERSION_JSON_URL = "http://enderekici.github.io/esp32c3/version.json";
+const unsigned long CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 // === GLOBALS ===
 WebServer server(80);
 unsigned long lastCheck = 0;
+String currentVersion = BUILD_VERSION;
+bool otaInProgress = false;
 
 // === OTA FUNCTION ===
-void otaBlink(int interval_ms) {
-  static unsigned long last = 0;
-  static bool state = LOW;
-  if (millis() - last >= interval_ms) {
-    last = millis();
-    state = !state;
-    digitalWrite(OTA_LED, state);
-  }
-}
-
 bool doOTA(const String& firmware_url) {
-  Serial.println("Starting OTA update...");
+  if (otaInProgress) return false;
+  otaInProgress = true;
 
-  // Blink LED fast before OTA starts
-  pinMode(OTA_LED, OUTPUT);
-  for (int i = 0; i < 20; i++) {
-    digitalWrite(OTA_LED, HIGH);
-    delay(100);
-    digitalWrite(OTA_LED, LOW);
-    delay(100);
-  }
+  Serial.println("Starting OTA update...");
 
   HTTPClient http;
   http.begin(firmware_url);
@@ -48,7 +31,7 @@ bool doOTA(const String& firmware_url) {
   if (code != 200) {
     Serial.printf("Failed to fetch firmware. HTTP code: %d\n", code);
     http.end();
-    digitalWrite(OTA_LED, LOW);
+    otaInProgress = false;
     return false;
   }
 
@@ -58,28 +41,27 @@ bool doOTA(const String& firmware_url) {
   if (len <= 0) {
     Serial.println("No firmware found at URL");
     http.end();
-    digitalWrite(OTA_LED, LOW);
+    otaInProgress = false;
     return false;
   }
 
   if (!Update.begin(len)) {
     Serial.println("Not enough space for OTA");
     http.end();
-    digitalWrite(OTA_LED, LOW);
+    otaInProgress = false;
     return false;
   }
 
-  size_t written = Update.writeStream(*stream);
+  Update.writeStream(*stream);
   if (Update.end() && Update.isFinished()) {
     Serial.println("OTA update complete! Rebooting...");
-    digitalWrite(OTA_LED, LOW);
     delay(1000);
     ESP.restart();
     return true;
   } else {
     Serial.println("OTA update failed");
     http.end();
-    digitalWrite(OTA_LED, LOW);
+    otaInProgress = false;
     return false;
   }
 }
@@ -111,18 +93,33 @@ bool fetchLatestVersion(String& latest_version, String& firmware_url) {
   return true;
 }
 
+// === CHECK OTA HELPER ===
+void checkForOTA() {
+  String latest_version, firmware_url;
+  if (!fetchLatestVersion(latest_version, firmware_url)) return;
+
+  Serial.printf("Current version: %s, Latest version: %s\n", currentVersion.c_str(), latest_version.c_str());
+
+  if (latest_version != currentVersion && !otaInProgress) {
+    Serial.println("New firmware available. Starting OTA...");
+    if (doOTA(firmware_url)) {
+      currentVersion = latest_version;
+    }
+  } else {
+    Serial.println("Already up-to-date.");
+  }
+}
+
 // === DASHBOARD ===
 void handleRoot() {
   String html = "<html><head><title>ESP32 Dashboard</title></head><body>";
   html += "<h1>ESP32 Dashboard</h1>";
-  html += "<p><strong>Firmware Version:</strong> " BUILD_VERSION "</p>";
+  html += "<p><strong>Firmware Version:</strong> " + currentVersion + "</p>";
   html += "<p><strong>Commit:</strong> " BUILD_COMMIT "</p>";
   html += "<p><strong>Build Date:</strong> " BUILD_DATE "</p>";
   html += "<p><strong>Uptime (ms):</strong> " + String(millis()) + "</p>";
   html += "<p><strong>IP:</strong> " + WiFi.localIP().toString() + "</p>";
-  html += "<form action=\"/update\" method=\"post\">";
-  html += "<button type=\"submit\">Update Now</button>";
-  html += "</form></body></html>";
+  html += "<form action=\"/update\" method=\"post\"><button type=\"submit\">Update Now</button></form></body></html>";
   server.send(200, "text/html", html);
 }
 
@@ -130,7 +127,7 @@ void handleUpdate() {
   server.send(200, "text/plain", "Manual OTA triggered. Check Serial Monitor...");
   String latest_version, firmware_url;
   if (fetchLatestVersion(latest_version, firmware_url)) {
-    if (latest_version != BUILD_VERSION) {
+    if (latest_version != currentVersion) {
       doOTA(firmware_url);
     } else {
       Serial.println("Already running latest firmware");
@@ -138,13 +135,9 @@ void handleUpdate() {
   }
 }
 
-// === SETUP ===
+// === SETUP / LOOP ===
 void setup() {
   Serial.begin(115200);
-
-  // Initialize OTA LED
-  pinMode(OTA_LED, OUTPUT);
-  digitalWrite(OTA_LED, LOW);
 
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   Serial.print("Connecting to Wi-Fi");
@@ -152,50 +145,22 @@ void setup() {
     Serial.print(".");
     delay(500);
   }
-  Serial.println("\nConnected!");
-  Serial.printf("IP Address: %s\n", WiFi.localIP().toString().c_str());
+  Serial.println("\nConnected! IP: " + WiFi.localIP().toString());
 
-  // Web server
   server.on("/", handleRoot);
   server.on("/update", HTTP_POST, handleUpdate);
   server.begin();
   Serial.println("Web server started");
 
-  // Immediate OTA check at boot
   lastCheck = millis();
   checkForOTA();
 }
 
-// === LOOP ===
 void loop() {
   server.handleClient();
 
-  // Periodic OTA check
   if (millis() - lastCheck > CHECK_INTERVAL) {
     lastCheck = millis();
     checkForOTA();
-  }
-
-  // Idle LED slow blink
-  static unsigned long lastBlink = 0;
-  if (millis() - lastBlink > 1000) {
-    lastBlink = millis();
-    digitalWrite(OTA_LED, !digitalRead(OTA_LED));
-  }
-}
-
-// === CHECK OTA HELPER ===
-void checkForOTA() {
-  String latest_version, firmware_url;
-  if (fetchLatestVersion(latest_version, firmware_url)) {
-    Serial.printf("Current version: %s, Latest version: %s\n", BUILD_VERSION, latest_version.c_str());
-    if (latest_version != BUILD_VERSION) {
-      Serial.println("New firmware available. Starting OTA...");
-      doOTA(firmware_url);
-    } else {
-      Serial.println("Already up-to-date.");
-    }
-  } else {
-    Serial.println("Failed to fetch latest version info.");
   }
 }
