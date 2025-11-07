@@ -33,12 +33,9 @@ jobs:
       - name: Select smallest sketch
         id: sketch
         run: |
-          # Find sketch folders
           SKETCH_FOLDERS=$(find . -maxdepth 1 -type d -not -path . -exec bash -c 'ls -1 "{}"/*.ino 2>/dev/null' \; | xargs -I{} dirname {})
-          # Pick folder with smallest .ino file
           SMALLEST_SKETCH=$(for f in $SKETCH_FOLDERS; do wc -c "$f/$(basename $f).ino" | awk '{print $1":"$f}'; done | sort -n | head -n1 | cut -d: -f2)
           echo "sketch_folder=$SMALLEST_SKETCH" >> "$GITHUB_OUTPUT"
-          echo "Using sketch folder: $SMALLEST_SKETCH"
 
       - name: Write build_info.h
         run: |

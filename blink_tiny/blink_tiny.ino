@@ -4,19 +4,19 @@
 #include <ArduinoJson.h>
 #include "build_info.h"
 
-// === CONFIG ===
+// CONFIG
 const char* WIFI_SSID = "Ender_2G";
 const char* WIFI_PASS = "134679tdg";
 const char* VERSION_JSON_URL = "http://enderekici.github.io/esp32c3/version.json";
-const unsigned long CHECK_INTERVAL = 5 * 60 * 1000;
 #define LED_PIN 8
+const unsigned long CHECK_INTERVAL = 5 * 60 * 1000;
 
-// === GLOBALS ===
+// GLOBALS
 unsigned long lastCheck = 0;
 String currentVersion = BUILD_VERSION;
 bool otaInProgress = false;
 
-// === OTA FUNCTION ===
+// OTA
 bool doOTA(const String& firmware_url) {
   if (otaInProgress) return false;
   otaInProgress = true;
@@ -24,8 +24,8 @@ bool doOTA(const String& firmware_url) {
   HTTPClient http;
   http.begin(firmware_url);
   int code = http.GET();
-
   if (code != 200) { http.end(); otaInProgress = false; return false; }
+
   int len = http.getSize();
   WiFiClient* stream = http.getStreamPtr();
   if (!Update.begin(len)) { http.end(); otaInProgress = false; return false; }
@@ -36,7 +36,7 @@ bool doOTA(const String& firmware_url) {
   } else { http.end(); otaInProgress = false; return false; }
 }
 
-// === FETCH LATEST VERSION INFO ===
+// Fetch Latest Version
 bool fetchLatestVersion(String& latest_version, String& firmware_url) {
   HTTPClient http;
   http.begin(VERSION_JSON_URL);
@@ -47,15 +47,14 @@ bool fetchLatestVersion(String& latest_version, String& firmware_url) {
   http.end();
 
   StaticJsonDocument<512> doc;
-  DeserializationError error = deserializeJson(doc, payload);
-  if (error) return false;
+  if (deserializeJson(doc, payload)) return false;
 
   latest_version = doc["version"].as<String>();
   firmware_url = doc["url"].as<String>();
   return true;
 }
 
-// === CHECK OTA HELPER ===
+// Check OTA
 void checkForOTA() {
   String latest_version, firmware_url;
   if (!fetchLatestVersion(latest_version, firmware_url)) return;
@@ -65,7 +64,7 @@ void checkForOTA() {
   }
 }
 
-// === SETUP / LOOP ===
+// Setup / Loop
 void setup() {
   Serial.begin(115200);
   pinMode(LED_PIN, OUTPUT);
