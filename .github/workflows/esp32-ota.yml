@@ -51,9 +51,7 @@ jobs:
           ARDUINO_VERBOSE_BUILD: "true"
         run: |
           mkdir build
-          arduino-cli compile \
-            --fqbn esp32:esp32:esp32c3:PartitionScheme=default,FlashSize=4MB,DebugLevel=info \
-            --output-dir build
+          arduino-cli compile --fqbn esp32:esp32:esp32c3:PartitionScheme=default,DebugLevel=info --output-dir build
 
       # 8️⃣ Copy OTA-ready firmware to docs folder
       - name: Copy OTA firmware
