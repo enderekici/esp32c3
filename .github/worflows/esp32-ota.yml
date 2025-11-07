@@ -1,0 +1,42 @@
+name: ESP32 Arduino OTA
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # allows creating releases
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Arduino CLI
+        uses: arduino/setup-arduino-cli@v1
+
+      - name: Install ESP32 core
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+
+      - name: Compile Sketch
+        run: |
+          mkdir build
+          arduino-cli compile --fqbn esp32:esp32:esp32c3 . -o build/firmware.bin
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "ESP32 Firmware $(date +'%Y-%m-%d %H:%M:%S')"
+          tag_name: build-${{ github.run_number }}
+          files: build/firmware.bin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger OTA update on ESP32
+        env:
+          OTA_URL: "http://192.168.2.100/update"
+        run: |
+          curl -X POST "$OTA_URL?url=https://github.com/enderekici/esp32c3/releases/latest/download/firmware.bin"
