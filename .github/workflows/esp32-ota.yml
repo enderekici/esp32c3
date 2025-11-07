@@ -40,13 +40,13 @@ jobs:
       - name: Install ArduinoJson
         run: arduino-cli lib install "ArduinoJson"
 
-      # 6️⃣ Write build_info.h
+      # 6️⃣ Write build_info.h (fixed syntax)
       - name: Write build_info.h
         run: |
           echo "#pragma once" > build_info.h
           echo "#define BUILD_COMMIT \"${{ steps.meta.outputs.commit }}\"" >> build_info.h
           echo "#define BUILD_DATE \"${{ steps.meta.outputs.build_date }}\"" >> build_info.h
-          echo "#define BUILD_VERSION \"${{ steps.meta.outputs.version }} (${ { steps.meta.outputs.sketch_name }} )\"" >> build_info.h
+          echo "#define BUILD_VERSION \"${{ steps.meta.outputs.version }} (${{ steps.meta.outputs.sketch_name }})\"" >> build_info.h
 
       # 7️⃣ Compile the latest modified sketch automatically
       - name: Compile sketch
@@ -79,14 +79,14 @@ jobs:
           }
           EOF
 
-      # 🔟 Commit & push to GitHub Pages
+      # 🔟 Commit & push to GitHub Pages (fixed sketch name)
       - name: Commit & push to GitHub Pages
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -B gh-pages
           git add docs/firmware.bin docs/version.json
-          git commit -m "Update firmware (${ { steps.meta.outputs.sketch_name }} ) [skip ci]" || echo "No changes to commit"
+          git commit -m "Update firmware (${{ steps.meta.outputs.sketch_name }}) [skip ci]" || echo "No changes to commit"
           git push --force origin gh-pages
 
       # 1️⃣1️⃣ Print OTA URL
