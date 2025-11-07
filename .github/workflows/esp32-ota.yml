@@ -11,9 +11,11 @@ jobs:
       contents: write
 
     steps:
+      # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2️⃣ Get build metadata
       - name: Get build metadata
         id: meta
         run: |
@@ -21,17 +23,21 @@ jobs:
           echo "build_date=$(date +'%Y-%m-%d %H:%M:%S')" >> "$GITHUB_OUTPUT"
           echo "version=build-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
+      # 3️⃣ Install Arduino CLI
       - name: Install Arduino CLI
         uses: arduino/setup-arduino-cli@v1
 
+      # 4️⃣ Install ESP32 core
       - name: Install ESP32 core
         run: |
           arduino-cli core update-index
           arduino-cli core install esp32:esp32
 
+      # 5️⃣ Install ArduinoJson library
       - name: Install ArduinoJson
         run: arduino-cli lib install "ArduinoJson"
 
+      # 6️⃣ Compile all sketches
       - name: Compile all sketches
         run: |
           mkdir -p build
@@ -39,14 +45,17 @@ jobs:
             SKETCH_NAME=$(basename "$sketch")
             echo "Compiling sketch: $SKETCH_NAME"
 
+            # Generate build_info.h inside each sketch folder
             echo "#pragma once" > "$sketch/build_info.h"
             echo "#define BUILD_COMMIT \"${{ steps.meta.outputs.commit }}\"" >> "$sketch/build_info.h"
             echo "#define BUILD_DATE \"${{ steps.meta.outputs.build_date }}\"" >> "$sketch/build_info.h"
             echo "#define BUILD_VERSION \"${{ steps.meta.outputs.version }}\"" >> "$sketch/build_info.h"
 
+            # Compile sketch
             arduino-cli compile --fqbn esp32:esp32:esp32c3 "$sketch" --output-dir build/"$SKETCH_NAME"
           done
 
+      # 7️⃣ Prepare OTA files & generate version.json
       - name: Prepare OTA files & generate version.json
         run: |
           mkdir -p docs
@@ -65,7 +74,7 @@ jobs:
                 echo ',' >> docs/version.json
               fi
 
-              cat <<EOF >> docs/version.json
+cat <<EOF >> docs/version.json
 {
   "name": "$SKETCH_NAME",
   "version": "${{ steps.meta.outputs.version }}",
@@ -73,10 +82,12 @@ jobs:
   "url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/$SKETCH_NAME.bin"
 }
 EOF
+
             fi
           done
           echo ']}' >> docs/version.json
 
+      # 8️⃣ Commit & push to GitHub Pages
       - name: Commit & push to GitHub Pages
         run: |
           git config user.name "github-actions[bot]"
@@ -86,5 +97,6 @@ EOF
           git commit -m "Update OTA firmware and version.json [skip ci]" || echo "No changes to commit"
           git push --force origin gh-pages
 
+      # 9️⃣ Print OTA URLs
       - name: Print OTA URLs
         run: cat docs/version.json
