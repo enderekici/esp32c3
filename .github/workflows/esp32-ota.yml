@@ -51,11 +51,13 @@ jobs:
           mkdir build
           arduino-cli compile --fqbn esp32:esp32:esp32c3 --output-dir build
 
-      # 8️⃣ Copy merged firmware to docs folder for GitHub Pages
-      - name: Copy merged firmware
+      # 8️⃣ Copy OTA-ready firmware to docs folder (smallest .ino.bin)
+      - name: Copy OTA firmware
         run: |
           mkdir -p docs
-          cp build/*.merged.bin docs/firmware.bin
+          OTA_FIRMWARE=$(ls build/*.ino.bin | head -n 1)
+          echo "Using $OTA_FIRMWARE for OTA"
+          cp "$OTA_FIRMWARE" docs/firmware.bin
 
       # 9️⃣ Generate version.json
       - name: Generate version.json
@@ -65,7 +67,7 @@ jobs:
           {
             "version": "${{ steps.meta.outputs.version }}",
             "sha256": "${SHA256}",
-            "url": "https://${{ github.repository_owner }}.github.io/${{ github.repository }}/firmware.bin"
+            "url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/firmware.bin"
           }
           EOF
 
@@ -83,4 +85,4 @@ jobs:
       - name: Print OTA URL
         run: |
           echo "Firmware OTA URL:"
-          echo "https://${{ github.repository_owner }}.github.io/${{ github.repository }}/firmware.bin"
+          echo "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/firmware.bin"
