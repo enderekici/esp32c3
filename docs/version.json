@@ -1,5 +1,5 @@
 {
-  "version": "build-1",
-  "sha256": "814a36c026008edc7d95f0af949243a0bba2f28e0751a457fecc0ea1654f3f51",
-  "url": "https://enderekici.github.io/esp32c3/esp32c3.ino.bin"
+  "version": "build-0",
+  "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "url": "https://enderekici.github.io/esp32c3/firmware.bin"
 }
