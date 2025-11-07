@@ -7,11 +7,18 @@ jobs:
   build-and-release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # allows creating releases
+      contents: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Get build metadata
+        id: meta
+        run: |
+          echo "commit=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "build_date=$(date +'%Y-%m-%d %H:%M:%S')" >> "$GITHUB_OUTPUT"
+          echo "version=build-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
       - name: Install Arduino CLI
         uses: arduino/setup-arduino-cli@v1
@@ -21,26 +28,29 @@ jobs:
           arduino-cli core update-index
           arduino-cli core install esp32:esp32
 
+      - name: Write build info header
+        run: |
+          mkdir -p src
+          echo "#pragma once" > src/build_info.h
+          echo "#define BUILD_COMMIT \"${{ steps.meta.outputs.commit }}\"" >> src/build_info.h
+          echo "#define BUILD_DATE \"${{ steps.meta.outputs.build_date }}\"" >> src/build_info.h
+          echo "#define BUILD_VERSION \"${{ steps.meta.outputs.version }}\"" >> src/build_info.h
+
       - name: Compile Sketch
         run: |
           mkdir build
           arduino-cli compile --fqbn esp32:esp32:esp32c3 --output-dir build
 
-      - name: Get current date
-        id: date
-        run: echo "now=$(date +'%Y-%m-%d %H:%M:%S')" >> "$GITHUB_OUTPUT"
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "ESP32 Firmware ${{ steps.date.outputs.now }}"
-          tag_name: build-${{ github.run_number }}
+          name: "ESP32 Firmware ${{ steps.meta.outputs.build_date }}"
+          tag_name: ${{ steps.meta.outputs.version }}
           files: build/*.bin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Trigger OTA update on ESP32
-        env:
-          OTA_URL: "http://192.168.2.100/update"
+      - name: Print firmware download link
         run: |
-          curl -X POST "$OTA_URL?url=https://github.com/enderekici/esp32c3/releases/latest/download/firmware.bin"
+          echo "Firmware ready at:"
+          echo "https://github.com/${{ github.repository }}/releases/latest/download/firmware.bin"

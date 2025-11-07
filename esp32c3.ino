@@ -2,6 +2,7 @@
 #include <WebServer.h>
 #include <HTTPClient.h>
 #include <Update.h>
+#include "src/build_info.h"
 
 const char* WIFI_SSID = "Ender_2G";
 const char* WIFI_PASS = "134679tdg";
@@ -9,7 +10,13 @@ const char* WIFI_PASS = "134679tdg";
 WebServer server(80);
 
 void handleStatus() {
-  String json = "{\"status\":\"ok\",\"uptime_ms\":" + String(millis()) + "}";
+  String json = "{";
+  json += "\"status\":\"ok\",";
+  json += "\"uptime_ms\":" + String(millis()) + ",";
+  json += "\"version\":\"" BUILD_VERSION "\",";
+  json += "\"commit\":\"" BUILD_COMMIT "\",";
+  json += "\"build_date\":\"" BUILD_DATE "\"";
+  json += "}";
   server.send(200, "application/json", json);
 }
 
@@ -23,7 +30,6 @@ void handleUpdate() {
   HTTPClient http;
   http.begin(url);
   int code = http.GET();
-
   if (code != 200) {
     server.send(500, "text/plain", "Download failed");
     return;
