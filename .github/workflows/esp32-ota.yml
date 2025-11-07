@@ -69,7 +69,7 @@ jobs:
           }
           EOF
 
-      # 🔟 Commit and push to GitHub Pages
+      # 🔟 Commit & force push to GitHub Pages
       - name: Commit & push to GitHub Pages
         run: |
           git config user.name "github-actions[bot]"
