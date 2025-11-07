@@ -24,7 +24,7 @@ jobs:
       - name: Compile Sketch
         run: |
           mkdir build
-          arduino-cli compile --fqbn esp32:esp32:esp32c3 . -o build/firmware.bin
+          arduino-cli compile --fqbn esp32:esp32:esp32c3 --output-dir build
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
