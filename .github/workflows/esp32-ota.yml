@@ -45,13 +45,17 @@ jobs:
           echo "#define BUILD_DATE \"${{ steps.meta.outputs.build_date }}\"" >> build_info.h
           echo "#define BUILD_VERSION \"${{ steps.meta.outputs.version }}\"" >> build_info.h
 
-      # 7️⃣ Compile the sketch
-      - name: Compile Sketch
+      # 7️⃣ Compile the sketch (with debug logging)
+      - name: Compile Sketch with Debug Logs
+        env:
+          ARDUINO_VERBOSE_BUILD: "true"
         run: |
           mkdir build
-          arduino-cli compile --fqbn esp32:esp32:esp32c3 --output-dir build
+          arduino-cli compile \
+            --fqbn esp32:esp32:esp32c3:PartitionScheme=default,FlashSize=4MB,DebugLevel=info \
+            --output-dir build
 
-      # 8️⃣ Copy OTA-ready firmware to docs folder (smallest .ino.bin)
+      # 8️⃣ Copy OTA-ready firmware to docs folder
       - name: Copy OTA firmware
         run: |
           mkdir -p docs
@@ -81,8 +85,10 @@ jobs:
           git commit -m "Update firmware and version.json [skip ci]" || echo "No changes to commit"
           git push --force origin gh-pages
 
-      # 1️⃣1️⃣ Print OTA URL for reference
+      # 1️⃣1️⃣ Print OTA URL
       - name: Print OTA URL
         run: |
-          echo "Firmware OTA URL:"
+          echo "✅ Firmware OTA URL:"
           echo "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/firmware.bin"
+          echo "✅ Version JSON:"
+          echo "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/version.json"
