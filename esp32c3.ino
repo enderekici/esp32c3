@@ -11,13 +11,35 @@ const char* WIFI_PASS = "134679tdg";
 const char* VERSION_JSON_URL = "https://enderekici.github.io/esp32c3/version.json";
 const unsigned long CHECK_INTERVAL = 5 * 60 * 1000; // 5 mins
 
+// === OTA LED ===
+#define OTA_LED 8  // Correct built-in LED pin for ESP32-C3 Super Mini
+
 // === GLOBALS ===
 WebServer server(80);
 unsigned long lastCheck = 0;
 
 // === OTA FUNCTION ===
+void otaBlink(int interval_ms) {
+  static unsigned long last = 0;
+  static bool state = LOW;
+  if (millis() - last >= interval_ms) {
+    last = millis();
+    state = !state;
+    digitalWrite(OTA_LED, state);
+  }
+}
+
 bool doOTA(const String& firmware_url) {
   Serial.println("Starting OTA update...");
+
+  // Blink LED fast before OTA starts
+  pinMode(OTA_LED, OUTPUT);
+  for (int i = 0; i < 20; i++) {
+    digitalWrite(OTA_LED, HIGH);
+    delay(100);
+    digitalWrite(OTA_LED, LOW);
+    delay(100);
+  }
 
   HTTPClient http;
   http.begin(firmware_url);
@@ -26,6 +48,7 @@ bool doOTA(const String& firmware_url) {
   if (code != 200) {
     Serial.printf("Failed to fetch firmware. HTTP code: %d\n", code);
     http.end();
+    digitalWrite(OTA_LED, LOW);
     return false;
   }
 
@@ -35,24 +58,28 @@ bool doOTA(const String& firmware_url) {
   if (len <= 0) {
     Serial.println("No firmware found at URL");
     http.end();
+    digitalWrite(OTA_LED, LOW);
     return false;
   }
 
   if (!Update.begin(len)) {
     Serial.println("Not enough space for OTA");
     http.end();
+    digitalWrite(OTA_LED, LOW);
     return false;
   }
 
   size_t written = Update.writeStream(*stream);
   if (Update.end() && Update.isFinished()) {
     Serial.println("OTA update complete! Rebooting...");
+    digitalWrite(OTA_LED, LOW);
     delay(1000);
     ESP.restart();
     return true;
   } else {
     Serial.println("OTA update failed");
     http.end();
+    digitalWrite(OTA_LED, LOW);
     return false;
   }
 }
@@ -115,6 +142,10 @@ void handleUpdate() {
 void setup() {
   Serial.begin(115200);
 
+  // Initialize OTA LED
+  pinMode(OTA_LED, OUTPUT);
+  digitalWrite(OTA_LED, LOW);
+
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   Serial.print("Connecting to Wi-Fi");
   while (WiFi.status() != WL_CONNECTED) {
@@ -143,6 +174,13 @@ void loop() {
   if (millis() - lastCheck > CHECK_INTERVAL) {
     lastCheck = millis();
     checkForOTA();
+  }
+
+  // Idle LED slow blink
+  static unsigned long lastBlink = 0;
+  if (millis() - lastBlink > 1000) {
+    lastBlink = millis();
+    digitalWrite(OTA_LED, !digitalRead(OTA_LED));
   }
 }
 
