@@ -26,12 +26,16 @@ jobs:
           mkdir build
           arduino-cli compile --fqbn esp32:esp32:esp32c3 --output-dir build
 
+      - name: Get current date
+        id: date
+        run: echo "now=$(date +'%Y-%m-%d %H:%M:%S')" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "ESP32 Firmware $(date +'%Y-%m-%d %H:%M:%S')"
+          name: "ESP32 Firmware ${{ steps.date.outputs.now }}"
           tag_name: build-${{ github.run_number }}
-          files: build/firmware.bin
+          files: build/*.bin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
