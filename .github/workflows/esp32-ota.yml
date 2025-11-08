@@ -69,15 +69,14 @@ jobs:
                 echo ',' >> docs/version.json
               fi
 
-cat <<EOF >> docs/version.json
-{
-  "name": "$SKETCH_NAME",
-  "version": "$VERSION",
-  "sha256": "$SHA256",
-  "url": "https://$OWNER.github.io/$REPO/$SKETCH_NAME.bin"
-}
-EOF
-
+              cat <<EOF >> docs/version.json
+              {
+                "name": "$SKETCH_NAME",
+                "version": "$VERSION",
+                "sha256": "$SHA256",
+                "url": "https://$OWNER.github.io/$REPO/$SKETCH_NAME.bin"
+              }
+              EOF
             fi
           done
           echo ']}' >> docs/version.json
