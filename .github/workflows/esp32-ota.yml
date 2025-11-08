@@ -85,15 +85,15 @@ jobs:
                 echo ',' >> docs/version.json
               fi
 
-              # ✅ heredoc content indented, closing EOF flush-left
+              # ✅ heredoc content can be indented, closing EOF must be flush-left
               cat >> docs/version.json <<EOF
-              {
-                "name": "$SKETCH_NAME",
-                "version": "$VERSION",
-                "sha256": "$SHA256",
-                "url": "https://$OWNER.github.io/$REPO/$SKETCH_NAME.bin"
-              }
-              EOF
+{
+  "name": "$SKETCH_NAME",
+  "version": "$VERSION",
+  "sha256": "$SHA256",
+  "url": "https://$OWNER.github.io/$REPO/$SKETCH_NAME.bin"
+}
+EOF
 
             fi
           done
