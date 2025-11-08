@@ -85,6 +85,7 @@ jobs:
                 echo ',' >> docs/version.json
               fi
 
+              # ✅ heredoc content indented, closing EOF flush-left
               cat >> docs/version.json <<EOF
               {
                 "name": "$SKETCH_NAME",
