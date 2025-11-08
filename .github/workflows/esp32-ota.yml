@@ -37,15 +37,22 @@ jobs:
       - name: Install ArduinoJson
         run: arduino-cli lib install "ArduinoJson"
 
-      # 6️⃣ Compile all sketches (exclude build/ and .github/)
+      # 6️⃣ Compile all sketches (only folders containing .ino)
       - name: Compile all sketches
         run: |
           mkdir -p build
-          for sketch in $(find . -maxdepth 1 -type d ! -name "build" ! -name ".github" ! -name "."); do
+          for sketch in $(find . -maxdepth 1 -type d ! -name "build" ! -name ".github" ! -name "." ); do
             SKETCH_NAME=$(basename "$sketch")
+            INO_FILE=$(find "$sketch" -maxdepth 1 -name "*.ino" | head -n 1)
+
+            if [ -z "$INO_FILE" ]; then
+              echo "Skipping $SKETCH_NAME (no .ino file)"
+              continue
+            fi
+
             echo "Compiling sketch: $SKETCH_NAME"
 
-            # Generate build_info.h inside each sketch folder
+            # Generate build_info.h inside sketch folder
             echo "#pragma once" > "$sketch/build_info.h"
             echo "#define BUILD_COMMIT \"${{ steps.meta.outputs.commit }}\"" >> "$sketch/build_info.h"
             echo "#define BUILD_DATE \"${{ steps.meta.outputs.build_date }}\"" >> "$sketch/build_info.h"
