@@ -37,7 +37,7 @@ jobs:
       - name: Install ArduinoJson
         run: arduino-cli lib install "ArduinoJson"
 
-      # 6️⃣ Compile all sketches (folders with .ino)
+      # 6️⃣ Compile all sketches (only folders containing .ino)
       - name: Compile all sketches
         run: |
           mkdir -p build
