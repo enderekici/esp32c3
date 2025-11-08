@@ -41,7 +41,7 @@ jobs:
       - name: Compile all sketches
         run: |
           mkdir -p build
-          for sketch in $(find . -maxdepth 1 -type d ! -name "build" ! -name ".github" ! -name "." ); do
+          for sketch in $(find . -maxdepth 1 -type d ! -name "build" ! -name ".github" ! -name "." ! -name "docs"); do
             SKETCH_NAME=$(basename "$sketch")
             INO_FILE=$(find "$sketch" -maxdepth 1 -name "*.ino" | head -n 1)
 
@@ -85,14 +85,14 @@ jobs:
                 echo ',' >> docs/version.json
               fi
 
-              cat <<EOF >> docs/version.json
-              {
-                "name": "$SKETCH_NAME",
-                "version": "$VERSION",
-                "sha256": "$SHA256",
-                "url": "https://$OWNER.github.io/$REPO/$SKETCH_NAME.bin"
-              }
-              EOF
+cat >> docs/version.json <<EOF
+{
+  "name": "$SKETCH_NAME",
+  "version": "$VERSION",
+  "sha256": "$SHA256",
+  "url": "https://$OWNER.github.io/$REPO/$SKETCH_NAME.bin"
+}
+EOF
 
             fi
           done
