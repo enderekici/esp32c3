@@ -1,5 +1,8 @@
-{
-  "version": "build-0",
-  "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-  "url": "https://enderekici.github.io/esp32c3/firmware.bin"
-}
+{ "firmwares": [
+    {
+      "name": "dashboard",
+      "version": "build-38",
+      "sha256": "cbe37714963520d60afbce8c3102526fba39e570a51e1b96eb751d036eb408e3",
+      "url": "https://enderekici.github.io/esp32c3/dashboard.bin"
+    }
+]}
