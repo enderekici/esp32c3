@@ -1,4 +1,4 @@
-```c++
+
 #include "secrets.h"
 #include "web_assets.h"
 #include <Arduino.h>
@@ -13,8 +13,8 @@
 #define BUILD_VERSION "0.0.1"
 #endif
 
-    const char *VERSION_JSON_URL =
-        "https://enderekici.github.io/esp32c3/version.json";
+const char *VERSION_JSON_URL =
+    "https://enderekici.github.io/esp32c3/version.json";
 const unsigned long CHECK_INTERVAL = 5 * 60 * 1000;
 
 AsyncWebServer server(80);
@@ -177,4 +177,3 @@ void loop() {
     checkForOTA();
   }
 }
-```
